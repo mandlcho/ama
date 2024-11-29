@@ -1,11 +1,29 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AMA</title>
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --bg-color: #f5f5f5;
+            --text-color: #555;
+            --heading-color: #444;
+            --meta-color: #777;
+            --card-bg: white;
+            --border-color: #ddd;
+        }
+
+        [data-theme="dark"] {
+            --bg-color: #1a1a1a;
+            --text-color: #bbb;
+            --heading-color: #ddd;
+            --meta-color: #999;
+            --card-bg: #2a2a2a;
+            --border-color: #444;
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -14,12 +32,13 @@
 
         body {
             font-family: 'JetBrains Mono', monospace;
-            background-color: #f5f5f5;
+            background-color: var(--bg-color);
             min-height: 100vh;
             padding-top: 15vh;
-            color: #555;
+            color: var(--text-color);
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
+            transition: background-color 0.3s ease;
         }
 
         .search-container {
@@ -37,16 +56,17 @@
             max-width: 600px;
             padding: 15px 25px;
             font-size: 18px;
-            border: 1px solid #ddd;
+            border: 1px solid var(--border-color);
             border-radius: 25px;
             outline: none;
-            background: white;
+            background: var(--card-bg);
+            color: var(--text-color);
             transition: all 0.3s ease;
             font-family: inherit;
         }
 
         .search-box:focus {
-            border-color: #999;
+            border-color: var(--meta-color);
         }
 
         .results-container {
@@ -64,11 +84,11 @@
         }
 
         .post-card {
-            background: white;
+            background: var(--card-bg);
             padding: 30px;
             margin-bottom: 25px;
             border-radius: 12px;
-            border: 1px solid #ddd;
+            border: 1px solid var(--border-color);
             cursor: pointer;
             transition: transform 0.2s ease;
         }
@@ -80,12 +100,12 @@
         .post-card h2 {
             margin: 0 0 15px 0;
             font-size: 1.4em;
-            color: #444;
+            color: var(--heading-color);
             line-height: 1.4;
         }
 
         .post-meta {
-            color: #777;
+            color: var(--meta-color);
             font-size: 0.9em;
             margin-bottom: 15px;
         }
@@ -100,7 +120,7 @@
             border-radius: 4px;
             margin: 0 8px 8px 0;
             font-size: 0.85em;
-            color: #555;
+            color: var(--text-color);
             font-weight: 500;
             letter-spacing: -0.2px;
         }
@@ -114,10 +134,10 @@
             text-align: center;
             color: #666;
             margin-top: 20px;
-            background: white;
+            background: var(--card-bg);
             padding: 20px;
             border-radius: 12px;
-            border: 1px solid #ddd;
+            border: 1px solid var(--border-color);
         }
 
         /* Pastel colors for tags */
@@ -142,7 +162,7 @@
 
         .modal-content {
             position: relative;
-            background-color: white;
+            background: var(--card-bg);
             margin: 40px auto;
             padding: 30px;
             width: 90%;
@@ -150,7 +170,7 @@
             border-radius: 12px;
             box-shadow: 0 5px 15px rgba(0,0,0,0.2);
             font-family: inherit;
-            color: #555;
+            color: var(--text-color);
         }
 
         .close-button {
@@ -178,7 +198,7 @@
         .modal-content h1 {
             margin-bottom: 20px;
             font-size: 2em;
-            color: #444;
+            color: var(--heading-color);
         }
 
         .modal-content p {
@@ -193,6 +213,35 @@
         .modal-content li {
             margin-bottom: 5px;
         }
+
+        /* Theme toggle button */
+        .theme-toggle {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 50%;
+            width: 48px;
+            height: 48px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+
+        .theme-toggle:hover {
+            transform: scale(1.1);
+        }
+
+        .theme-toggle svg {
+            width: 24px;
+            height: 24px;
+            fill: var(--text-color);
+            transition: fill 0.3s ease;
+        }
     </style>
 </head>
 <body>
@@ -205,6 +254,13 @@
                aria-label="Search knowledge base">
         <div class="results-container" id="resultsContainer"></div>
     </div>
+
+    <!-- Theme toggle button -->
+    <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M9.37,5.51C9.19,6.15,9.1,6.82,9.1,7.5c0,4.08,3.32,7.4,7.4,7.4c0.68,0,1.35-0.09,1.99-0.27C17.45,17.19,14.93,19,12,19 c-3.86,0-7-3.14-7-7C5,9.07,6.81,6.55,9.37,5.51z M12,3c-4.97,0-9,4.03-9,9s4.03,9,9,9s9-4.03,9-9c0-0.46-0.04-0.92-0.1-1.36 c-0.98,1.37-2.58,2.26-4.4,2.26c-2.98,0-5.4-2.42-5.4-5.4c0-1.81,0.89-3.42,2.26-4.4C12.92,3.04,12.46,3,12,3L12,3z"/>
+        </svg>
+    </button>
 
     <!-- Modal for displaying full articles -->
     <div id="articleModal" class="modal">
@@ -337,6 +393,23 @@
         window.addEventListener('load', () => {
             searchInput.focus();
         });
+
+        // Theme toggle functionality
+        const themeToggle = document.getElementById('themeToggle');
+        const html = document.documentElement;
+        
+        function toggleTheme() {
+            const currentTheme = html.getAttribute('data-theme');
+            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+            html.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+        }
+
+        // Set initial theme from localStorage
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        html.setAttribute('data-theme', savedTheme);
+
+        themeToggle.addEventListener('click', toggleTheme);
     </script>
 </body>
 </html>
