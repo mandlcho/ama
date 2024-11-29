@@ -78,8 +78,55 @@ class GitHubAPI {
         }
     }
 
+    async ensureDirectoryExists(path) {
+        try {
+            // Check if the directory exists
+            const dirPath = path.split('/').slice(0, -1).join('/') + '/';
+            console.log('Checking directory:', dirPath);
+
+            const response = await fetch(`${this.baseURL}${dirPath}`, {
+                headers: {
+                    'Authorization': `token ${this.token}`,
+                    'Accept': 'application/vnd.github.v3+json'
+                }
+            });
+
+            // If directory doesn't exist, create it with a placeholder file
+            if (!response.ok) {
+                console.log('Directory does not exist, creating...');
+                const placeholderContent = btoa('# Placeholder for directory');
+                
+                await fetch(`${this.baseURL}${dirPath}README.md`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `token ${this.token}`,
+                        'Accept': 'application/vnd.github.v3+json'
+                    },
+                    body: JSON.stringify({
+                        message: 'Create directory',
+                        content: placeholderContent,
+                        branch: 'main'
+                    })
+                });
+            }
+        } catch (error) {
+            console.error('Error ensuring directory exists:', error);
+            throw error;
+        }
+    }
+
     async createOrUpdateFile(path, content, message, sha = null) {
         try {
+            // Ensure the directory exists before creating/updating file
+            await this.ensureDirectoryExists(path);
+
+            // Log detailed file creation information
+            console.log('Attempting to create/update file:', {
+                path: path,
+                messageType: sha ? 'Update' : 'Create',
+                contentLength: content.length
+            });
+
             const payload = {
                 message: message,
                 content: btoa(content),
@@ -104,7 +151,8 @@ class GitHubAPI {
                 console.error('GitHub API Error:', {
                     status: response.status,
                     statusText: response.statusText,
-                    body: errorBody
+                    body: errorBody,
+                    payload: payload
                 });
                 throw new Error(`GitHub API Error: ${response.status} ${response.statusText}`);
             }
