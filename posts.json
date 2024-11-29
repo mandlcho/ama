@@ -1,0 +1,50 @@
+[
+  {
+    "title": "Getting Started with AMA-DB",
+    "date": "2024-11-29T16:33:18+08:00",
+    "tags": [
+      "introduction",
+      "knowledge base"
+    ],
+    "category": "Uncategorized",
+    "url": "getting-started.html",
+    "excerpt": "title: \"Getting Started with AMA-DB\" date: 2024-11-29T16:33:18+08:00 draft: false tags: [\"introduction\", \"knowledge base\"] author: \"Mandl Cho\" description: \"An overview of the AMA-DB knowledge management system\"  # Welcome to AMA-DB  AMA-DB (Ask Me Anything Database) is a personal knowledge manageme..."
+  },
+  {
+    "title": "Git Workflow Guide",
+    "date": "2024-01-22",
+    "category": "Development",
+    "tags": [
+      "git",
+      "version control",
+      "workflow"
+    ],
+    "url": "git-workflow.html",
+    "excerpt": "A practical guide to using Git effectively in your development workflow, covering basic commands and best practices."
+  },
+  {
+    "title": "Python Tips and Best Practices",
+    "date": "2024-01-21",
+    "category": "Programming",
+    "tags": [
+      "python",
+      "programming",
+      "tips",
+      "best practices"
+    ],
+    "url": "python-tips.html",
+    "excerpt": "Essential Python tips and best practices every developer should know, including virtual environments, PEP 8, and documentation."
+  },
+  {
+    "title": "Getting Started with Mandl KB",
+    "date": "2024-01-20",
+    "category": "Guide",
+    "tags": [
+      "guide",
+      "introduction",
+      "getting started"
+    ],
+    "url": "getting-started.html",
+    "excerpt": "Welcome to Mandl KB! This is your personal knowledge base search engine. Learn how to effectively search and navigate through the content."
+  }
+]
