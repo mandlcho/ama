@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mandl KB</title>
+    <title>AMA</title>
     <style>
         * {
             margin: 0;
@@ -12,23 +12,21 @@
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            font-family: 'Courier New', Courier, monospace;
             background-color: #f5f5f5;
             min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            padding-top: 20vh;
+            color: #555;
         }
 
         .search-container {
             width: 90%;
             max-width: 800px;
             padding: 20px;
-            transition: all 0.3s ease;
-        }
-
-        .search-container.has-results {
-            margin-top: -30vh;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
         }
 
         .search-box {
@@ -42,6 +40,7 @@
             background: white;
             transition: all 0.3s ease;
             box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            font-family: inherit;
         }
 
         .search-box:focus {
@@ -51,6 +50,7 @@
         .results-container {
             margin-top: 20px;
             width: 100%;
+            max-width: 600px;
             opacity: 0;
             transform: translateY(20px);
             transition: all 0.3s ease;
@@ -67,20 +67,22 @@
             margin-bottom: 15px;
             border-radius: 12px;
             border: 1px solid #ddd;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+
+        .post-card:hover {
+            transform: translateY(-2px);
         }
 
         .post-card h2 {
             margin: 0 0 10px 0;
             font-size: 1.4em;
-        }
-
-        .post-card h2 a {
-            color: #2c3e50;
-            text-decoration: none;
+            color: #444;
         }
 
         .post-meta {
-            color: #666;
+            color: #777;
             font-size: 0.9em;
             margin-bottom: 10px;
         }
@@ -95,11 +97,11 @@
         }
 
         /* Pastel colors for tags */
-        .tag:nth-child(5n+1) { background-color: #FFE5E5; }  /* Pastel Pink */
-        .tag:nth-child(5n+2) { background-color: #E5FFE5; }  /* Pastel Green */
-        .tag:nth-child(5n+3) { background-color: #E5E5FF; }  /* Pastel Blue */
-        .tag:nth-child(5n+4) { background-color: #FFE5FF; }  /* Pastel Purple */
-        .tag:nth-child(5n+5) { background-color: #FFFFE5; }  /* Pastel Yellow */
+        .tag:nth-child(5n+1) { background-color: #FFE5E5; }
+        .tag:nth-child(5n+2) { background-color: #E5FFE5; }
+        .tag:nth-child(5n+3) { background-color: #E5E5FF; }
+        .tag:nth-child(5n+4) { background-color: #FFE5FF; }
+        .tag:nth-child(5n+5) { background-color: #FFFFE5; }
 
         .no-results {
             text-align: center;
@@ -109,6 +111,73 @@
             padding: 20px;
             border-radius: 12px;
             border: 1px solid #ddd;
+        }
+
+        /* Modal styles */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            overflow-y: auto;
+        }
+
+        .modal-content {
+            position: relative;
+            background-color: white;
+            margin: 40px auto;
+            padding: 30px;
+            width: 90%;
+            max-width: 800px;
+            border-radius: 12px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            font-family: inherit;
+            color: #555;
+        }
+
+        .close-button {
+            position: absolute;
+            right: 20px;
+            top: 20px;
+            font-size: 24px;
+            cursor: pointer;
+            color: #666;
+            background: none;
+            border: none;
+            padding: 5px;
+            line-height: 1;
+        }
+
+        .close-button:hover {
+            color: #333;
+        }
+
+        .modal-content article {
+            margin-top: 20px;
+            line-height: 1.6;
+        }
+
+        .modal-content h1 {
+            margin-bottom: 20px;
+            font-size: 2em;
+            color: #444;
+        }
+
+        .modal-content p {
+            margin-bottom: 15px;
+        }
+
+        .modal-content ul {
+            margin-bottom: 15px;
+            padding-left: 20px;
+        }
+
+        .modal-content li {
+            margin-bottom: 5px;
         }
     </style>
 </head>
@@ -123,10 +192,18 @@
         <div class="results-container" id="resultsContainer"></div>
     </div>
 
+    <!-- Modal for displaying full articles -->
+    <div id="articleModal" class="modal">
+        <div class="modal-content">
+            <button class="close-button" onclick="closeModal()">&times;</button>
+            <div id="modalContent"></div>
+        </div>
+    </div>
+
     <script>
         const searchInput = document.getElementById('searchInput');
         const resultsContainer = document.getElementById('resultsContainer');
-        const searchContainer = document.getElementById('searchContainer');
+        const modal = document.getElementById('articleModal');
         let searchTimeout;
 
         // Function to search posts
@@ -178,11 +255,10 @@
                     </div>
                 `;
                 resultsContainer.classList.add('visible');
-                searchContainer.classList.add('has-results');
             } else if (posts.length > 0) {
                 const postsHtml = posts.map(post => `
-                    <div class="post-card">
-                        <h2><a href="${post.url}">${post.title}</a></h2>
+                    <div class="post-card" onclick="openArticle('${post.url}')">
+                        <h2>${post.title}</h2>
                         <div class="post-meta">
                             <span>${new Date(post.date).toLocaleDateString()}</span> | 
                             <span>${post.category}</span>
@@ -196,11 +272,41 @@
                 
                 resultsContainer.innerHTML = postsHtml;
                 resultsContainer.classList.add('visible');
-                searchContainer.classList.add('has-results');
             } else {
                 resultsContainer.innerHTML = '';
                 resultsContainer.classList.remove('visible');
-                searchContainer.classList.remove('has-results');
+            }
+        }
+
+        // Function to open article in modal
+        async function openArticle(url) {
+            try {
+                const response = await fetch(url);
+                const html = await response.text();
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                const article = doc.querySelector('article');
+                
+                if (article) {
+                    document.getElementById('modalContent').innerHTML = article.outerHTML;
+                    modal.style.display = 'block';
+                    document.body.style.overflow = 'hidden';
+                }
+            } catch (error) {
+                console.error('Error loading article:', error);
+            }
+        }
+
+        // Function to close modal
+        function closeModal() {
+            modal.style.display = 'none';
+            document.body.style.overflow = 'auto';
+        }
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            if (event.target === modal) {
+                closeModal();
             }
         }
 
