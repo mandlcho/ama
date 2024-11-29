@@ -14,22 +14,34 @@
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
             background-color: #f5f5f5;
-            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .search-container {
+            width: 90%;
             max-width: 800px;
-            margin: 40px auto;
+            padding: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .search-container.has-results {
+            margin-top: -30vh;
         }
 
         .search-box {
             width: 100%;
+            max-width: 600px;
             padding: 15px 25px;
             font-size: 18px;
             border: 1px solid #ddd;
-            border-radius: 8px;
+            border-radius: 25px;
             outline: none;
             background: white;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
         }
 
         .search-box:focus {
@@ -39,13 +51,21 @@
         .results-container {
             margin-top: 20px;
             width: 100%;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.3s ease;
+        }
+
+        .results-container.visible {
+            opacity: 1;
+            transform: translateY(0);
         }
 
         .post-card {
             background: white;
             padding: 20px;
             margin-bottom: 15px;
-            border-radius: 8px;
+            border-radius: 12px;
             border: 1px solid #ddd;
         }
 
@@ -67,13 +87,19 @@
 
         .tag {
             display: inline-block;
-            background: #e9ecef;
-            padding: 3px 8px;
+            padding: 3px 12px;
             border-radius: 15px;
             margin: 0 5px 5px 0;
             font-size: 0.8em;
-            color: #495057;
+            color: #555;
         }
+
+        /* Pastel colors for tags */
+        .tag:nth-child(5n+1) { background-color: #FFE5E5; }  /* Pastel Pink */
+        .tag:nth-child(5n+2) { background-color: #E5FFE5; }  /* Pastel Green */
+        .tag:nth-child(5n+3) { background-color: #E5E5FF; }  /* Pastel Blue */
+        .tag:nth-child(5n+4) { background-color: #FFE5FF; }  /* Pastel Purple */
+        .tag:nth-child(5n+5) { background-color: #FFFFE5; }  /* Pastel Yellow */
 
         .no-results {
             text-align: center;
@@ -81,16 +107,16 @@
             margin-top: 20px;
             background: white;
             padding: 20px;
-            border-radius: 8px;
+            border-radius: 12px;
             border: 1px solid #ddd;
         }
     </style>
 </head>
 <body>
-    <div class="search-container">
+    <div class="search-container" id="searchContainer">
         <input type="text" 
                class="search-box" 
-               placeholder="Search Mandl's Knowledge Base..." 
+               placeholder="Type something..." 
                id="searchInput" 
                autocomplete="off"
                aria-label="Search knowledge base">
@@ -100,44 +126,8 @@
     <script>
         const searchInput = document.getElementById('searchInput');
         const resultsContainer = document.getElementById('resultsContainer');
+        const searchContainer = document.getElementById('searchContainer');
         let searchTimeout;
-
-        // Function to load and display posts
-        async function loadPosts() {
-            try {
-                const posts = [
-                    {
-                        title: "Getting Started with Mandl KB",
-                        date: "2024-01-20",
-                        category: "Guide",
-                        tags: ["guide", "introduction", "getting started"],
-                        url: "posts/getting-started.html",
-                        excerpt: "Welcome to Mandl KB! This is your personal knowledge base search engine. Learn how to effectively search and navigate through the content."
-                    },
-                    {
-                        title: "Python Tips and Best Practices",
-                        date: "2024-01-21",
-                        category: "Programming",
-                        tags: ["python", "programming", "tips", "best practices"],
-                        url: "posts/python-tips.html",
-                        excerpt: "Essential Python tips and best practices every developer should know, including virtual environments, PEP 8, and documentation."
-                    },
-                    {
-                        title: "Git Workflow Guide",
-                        date: "2024-01-22",
-                        category: "Development",
-                        tags: ["git", "version control", "workflow"],
-                        url: "posts/git-workflow.html",
-                        excerpt: "A practical guide to using Git effectively in your development workflow, covering basic commands and best practices."
-                    }
-                ];
-
-                displayPosts(posts);
-            } catch (error) {
-                console.error('Error loading posts:', error);
-                showError();
-            }
-        }
 
         // Function to search posts
         function searchPosts(query) {
@@ -169,12 +159,12 @@
                 }
             ];
 
-            const filteredPosts = posts.filter(post => {
+            const filteredPosts = query ? posts.filter(post => {
                 return post.title.toLowerCase().includes(query) ||
                        post.category.toLowerCase().includes(query) ||
                        post.tags.some(tag => tag.toLowerCase().includes(query)) ||
                        post.excerpt.toLowerCase().includes(query);
-            });
+            }) : [];
 
             displayPosts(filteredPosts, query);
         }
@@ -187,6 +177,8 @@
                         No results found for "${query}"
                     </div>
                 `;
+                resultsContainer.classList.add('visible');
+                searchContainer.classList.add('has-results');
             } else if (posts.length > 0) {
                 const postsHtml = posts.map(post => `
                     <div class="post-card">
@@ -203,18 +195,13 @@
                 `).join('');
                 
                 resultsContainer.innerHTML = postsHtml;
+                resultsContainer.classList.add('visible');
+                searchContainer.classList.add('has-results');
             } else {
                 resultsContainer.innerHTML = '';
+                resultsContainer.classList.remove('visible');
+                searchContainer.classList.remove('has-results');
             }
-        }
-
-        // Function to show error message
-        function showError() {
-            resultsContainer.innerHTML = `
-                <div class="no-results">
-                    An error occurred while loading the content. Please try again.
-                </div>
-            `;
         }
 
         // Event listener for search input
@@ -222,17 +209,12 @@
             clearTimeout(searchTimeout);
             searchTimeout = setTimeout(() => {
                 const query = e.target.value.trim();
-                if (query) {
-                    searchPosts(query);
-                } else {
-                    loadPosts();
-                }
+                searchPosts(query);
             }, 300);
         });
 
-        // Load posts when page loads
+        // Focus search input when page loads
         window.addEventListener('load', () => {
-            loadPosts();
             searchInput.focus();
         });
     </script>
