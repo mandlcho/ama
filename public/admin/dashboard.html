@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - Blog Search</title>
+    <link rel="stylesheet" href="../styles.css">
+    <style>
+        body {
+            height: auto;
+            min-height: 100vh;
+            display: block;
+            padding: 2rem;
+        }
+
+        .dashboard-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+
+        .nav-tabs {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            border-bottom: 2px solid #ddd;
+            padding-bottom: 1rem;
+        }
+
+        .nav-tab {
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+            border-radius: 6px;
+            transition: background-color 0.3s ease;
+        }
+
+        .nav-tab:hover {
+            background-color: #f5f5f5;
+        }
+
+        .nav-tab.active {
+            background-color: #3498db;
+            color: white;
+        }
+
+        .content-section {
+            display: none;
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+        }
+
+        .content-section.active {
+            display: block;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 0.8rem;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 1rem;
+        }
+
+        .form-group textarea {
+            min-height: 200px;
+            resize: vertical;
+        }
+
+        .tag-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+
+        .tag {
+            background: #f0f0f0;
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .tag button {
+            background: none;
+            border: none;
+            color: #666;
+            padding: 0;
+            cursor: pointer;
+            font-size: 1.2rem;
+        }
+
+        .success-message {
+            color: #27ae60;
+            margin-top: 1rem;
+            text-align: center;
+        }
+
+        .error-message {
+            color: #e74c3c;
+            margin-top: 1rem;
+            text-align: center;
+        }
+
+        .logout-btn {
+            background: #e74c3c;
+        }
+
+        .logout-btn:hover {
+            background: #c0392b;
+        }
+
+        .media-upload-container {
+            border: 2px dashed #ddd;
+            padding: 1.5rem;
+            border-radius: 8px;
+            text-align: center;
+            margin-bottom: 1rem;
+        }
+
+        .media-preview {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .media-item {
+            position: relative;
+            border-radius: 8px;
+            overflow: hidden;
+            aspect-ratio: 16/9;
+        }
+
+        .media-item img,
+        .media-item video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .media-item .remove-media {
+            position: absolute;
+            top: 0.5rem;
+            right: 0.5rem;
+            background: rgba(0, 0, 0, 0.5);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .upload-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+        }
+
+        .upload-btn {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.8rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            background: #3498db;
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+
+        .upload-btn:hover {
+            background: #2980b9;
+        }
+
+        .editor-toolbar {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
+            padding: 0.5rem;
+            background: #f5f5f5;
+            border-radius: 8px;
+        }
+
+        .editor-toolbar button {
+            padding: 0.5rem;
+            border: none;
+            border-radius: 4px;
+            background: white;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+
+        .editor-toolbar button:hover {
+            background: #e0e0e0;
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <div class="header">
+            <h1>Admin Dashboard</h1>
+            <button class="logout-btn" onclick="logout()">Logout</button>
+        </div>
+
+        <div class="nav-tabs">
+            <div class="nav-tab active" onclick="showSection('posts')">Posts</div>
+            <div class="nav-tab" onclick="showSection('categories')">Categories</div>
+            <div class="nav-tab" onclick="showSection('tags')">Tags</div>
+        </div>
+
+        <!-- Posts Section -->
+        <div id="posts" class="content-section active">
+            <h2>Create New Post</h2>
+            <form id="postForm">
+                <div class="form-group">
+                    <label for="postTitle">Title</label>
+                    <input type="text" id="postTitle" required>
+                </div>
+                <div class="form-group">
+                    <label for="postCategory">Category</label>
+                    <select id="postCategory" required></select>
+                </div>
+                <div class="form-group">
+                    <label for="postTags">Tags</label>
+                    <select id="postTags" multiple></select>
+                    <div id="selectedTags" class="tag-list"></div>
+                </div>
+                <div class="form-group">
+                    <label>Media</label>
+                    <div class="media-upload-container">
+                        <div class="media-preview" id="mediaPreview"></div>
+                        <div class="upload-buttons">
+                            <button type="button" class="upload-btn" onclick="document.getElementById('imageUpload').click()">
+                                <i class="fas fa-image"></i> Add Image
+                            </button>
+                            <button type="button" class="upload-btn" onclick="document.getElementById('videoUpload').click()">
+                                <i class="fas fa-video"></i> Add Video
+                            </button>
+                        </div>
+                        <input type="file" id="imageUpload" accept="image/*" style="display: none" onchange="handleFileUpload(this, 'image')">
+                        <input type="file" id="videoUpload" accept="video/*" style="display: none" onchange="handleFileUpload(this, 'video')">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="postContent">Content</label>
+                    <div class="editor-toolbar">
+                        <button type="button" onclick="insertMedia()">Insert Media</button>
+                        <button type="button" onclick="formatText('bold')"><i class="fas fa-bold"></i></button>
+                        <button type="button" onclick="formatText('italic')"><i class="fas fa-italic"></i></button>
+                        <button type="button" onclick="formatText('link')"><i class="fas fa-link"></i></button>
+                    </div>
+                    <textarea id="postContent" required></textarea>
+                </div>
+                <button type="submit">Create Post</button>
+                <div id="postMessage"></div>
+            </form>
+        </div>
+
+        <!-- Categories Section -->
+        <div id="categories" class="content-section">
+            <h2>Add New Category</h2>
+            <form id="categoryForm">
+                <div class="form-group">
+                    <label for="categoryName">Category Name</label>
+                    <input type="text" id="categoryName" required>
+                </div>
+                <button type="submit">Add Category</button>
+                <div id="categoryMessage"></div>
+            </form>
+        </div>
+
+        <!-- Tags Section -->
+        <div id="tags" class="content-section">
+            <h2>Add New Tag</h2>
+            <form id="tagForm">
+                <div class="form-group">
+                    <label for="tagName">Tag Name</label>
+                    <input type="text" id="tagName" required>
+                </div>
+                <button type="submit">Add Tag</button>
+                <div id="tagMessage"></div>
+            </form>
+        </div>
+    </div>
+
+    <script src="https://kit.fontawesome.com/your-font-awesome-kit.js"></script>
+    <script>
+        // Check authentication
+        function checkAuth() {
+            const token = localStorage.getItem('adminToken');
+            if (!token) {
+                window.location.href = '/admin/login.html';
+            }
+        }
+
+        // Logout function
+        function logout() {
+            localStorage.removeItem('adminToken');
+            window.location.href = '/admin/login.html';
+        }
+
+        // Show/hide sections
+        function showSection(sectionId) {
+            document.querySelectorAll('.content-section').forEach(section => {
+                section.classList.remove('active');
+            });
+            document.querySelectorAll('.nav-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.getElementById(sectionId).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        // Load categories and tags
+        async function loadFormData() {
+            try {
+                const [categoriesRes, tagsRes] = await Promise.all([
+                    fetch('/api/categories'),
+                    fetch('/api/tags')
+                ]);
+
+                const categories = await categoriesRes.json();
+                const tags = await tagsRes.json();
+
+                const categorySelect = document.getElementById('postCategory');
+                categorySelect.innerHTML = categories.map(cat => 
+                    `<option value="${cat.id}">${cat.name}</option>`
+                ).join('');
+
+                const tagSelect = document.getElementById('postTags');
+                tagSelect.innerHTML = tags.map(tag => 
+                    `<option value="${tag.id}">${tag.name}</option>`
+                ).join('');
+            } catch (error) {
+                console.error('Error loading form data:', error);
+            }
+        }
+
+        // Handle form submissions
+        async function submitForm(endpoint, data, messageElement) {
+            try {
+                // Add media IDs to post data if it's a post
+                if (endpoint === '/api/posts') {
+                    data.media = uploadedMedia.map(m => m.id);
+                }
+
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    messageElement.className = 'success-message';
+                    messageElement.textContent = 'Created successfully!';
+                    uploadedMedia = []; // Clear uploaded media
+                    updateMediaPreview();
+                    loadFormData();
+                } else {
+                    throw new Error(result.error);
+                }
+            } catch (error) {
+                messageElement.className = 'error-message';
+                messageElement.textContent = error.message;
+            }
+        }
+
+        let uploadedMedia = [];
+
+        async function handleFileUpload(input, type) {
+            const file = input.files[0];
+            if (!file) return;
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const response = await fetch('/api/upload', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
+                    },
+                    body: formData
+                });
+
+                if (!response.ok) throw new Error('Upload failed');
+                
+                const media = await response.json();
+                uploadedMedia.push(media);
+                updateMediaPreview();
+            } catch (error) {
+                console.error('Error uploading file:', error);
+                alert('Failed to upload file');
+            }
+        }
+
+        function updateMediaPreview() {
+            const preview = document.getElementById('mediaPreview');
+            preview.innerHTML = uploadedMedia.map((media, index) => `
+                <div class="media-item">
+                    ${media.type === 'image' 
+                        ? `<img src="${media.url}" alt="Uploaded media">`
+                        : `<video src="${media.url}" controls></video>`
+                    }
+                    <button class="remove-media" onclick="removeMedia(${index})">×</button>
+                </div>
+            `).join('');
+        }
+
+        function removeMedia(index) {
+            uploadedMedia.splice(index, 1);
+            updateMediaPreview();
+        }
+
+        function insertMedia() {
+            const textarea = document.getElementById('postContent');
+            const cursorPos = textarea.selectionStart;
+            
+            const mediaList = uploadedMedia.map(media => {
+                if (media.type === 'image') {
+                    return `<img src="${media.url}" alt="Post image">`;
+                } else {
+                    return `<video src="${media.url}" controls></video>`;
+                }
+            }).join('\n');
+
+            const content = textarea.value;
+            textarea.value = content.substring(0, cursorPos) + mediaList + content.substring(cursorPos);
+        }
+
+        function formatText(type) {
+            const textarea = document.getElementById('postContent');
+            const start = textarea.selectionStart;
+            const end = textarea.selectionEnd;
+            const selectedText = textarea.value.substring(start, end);
+            
+            let formattedText;
+            switch (type) {
+                case 'bold':
+                    formattedText = `<strong>${selectedText}</strong>`;
+                    break;
+                case 'italic':
+                    formattedText = `<em>${selectedText}</em>`;
+                    break;
+                case 'link':
+                    const url = prompt('Enter URL:');
+                    if (url) {
+                        formattedText = `<a href="${url}">${selectedText}</a>`;
+                    }
+                    break;
+            }
+            
+            if (formattedText) {
+                textarea.value = textarea.value.substring(0, start) + formattedText + textarea.value.substring(end);
+            }
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            checkAuth();
+            loadFormData();
+
+            // Post form submission
+            document.getElementById('postForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const data = {
+                    title: document.getElementById('postTitle').value,
+                    content: document.getElementById('postContent').value,
+                    categoryId: document.getElementById('postCategory').value,
+                    tags: Array.from(document.getElementById('postTags').selectedOptions).map(opt => opt.value)
+                };
+                await submitForm('/api/posts', data, document.getElementById('postMessage'));
+            });
+
+            // Category form submission
+            document.getElementById('categoryForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const data = {
+                    name: document.getElementById('categoryName').value
+                };
+                await submitForm('/api/categories', data, document.getElementById('categoryMessage'));
+            });
+
+            // Tag form submission
+            document.getElementById('tagForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const data = {
+                    name: document.getElementById('tagName').value
+                };
+                await submitForm('/api/tags', data, document.getElementById('tagMessage'));
+            });
+        });
+    </script>
+</body>
+</html>

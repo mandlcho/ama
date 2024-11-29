@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blog Admin</title>
+    <link rel="stylesheet" href="../styles.css">
+    <style>
+        .post-editor {
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+        }
+        .post-editor input, .post-editor textarea {
+            width: 100%;
+            margin-bottom: 10px;
+            padding: 8px;
+        }
+        .post-editor textarea {
+            height: 400px;
+            font-family: monospace;
+        }
+        .post-list {
+            max-width: 800px;
+            margin: 20px auto;
+        }
+        .post-item {
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .post-actions button {
+            margin-left: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="post-editor">
+        <h2>Create/Edit Post</h2>
+        <form id="postForm">
+            <input type="text" id="title" placeholder="Post Title" required>
+            <input type="text" id="tags" placeholder="Tags (comma-separated)">
+            <input type="text" id="category" placeholder="Category">
+            <textarea id="content" placeholder="Post content (HTML)" required></textarea>
+            <button type="submit">Save Post</button>
+        </form>
+    </div>
+
+    <div class="post-list">
+        <h2>Posts</h2>
+        <div id="posts"></div>
+    </div>
+
+    <script>
+        // Helper function to slugify titles
+        function slugify(text) {
+            return text.toLowerCase()
+                .replace(/[^a-z0-9]+/g, '-')
+                .replace(/(^-|-$)/g, '');
+        }
+
+        // Create post HTML template
+        function createPostTemplate(title, tags, category, content) {
+            const date = new Date().toISOString().split('T')[0];
+            return `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>${title}</title>
+    <meta name="author" content="Admin">
+    <meta name="date" content="${date}">
+    <meta name="tags" content="${tags}">
+    <meta name="category" content="${category}">
+    <link rel="stylesheet" href="../public/styles.css">
+</head>
+<body class="post-content">
+    <article>
+        <h1>${title}</h1>
+        <div class="post-meta">
+            <span class="date">${date}</span>
+            <span class="category">${category}</span>
+            <span class="tags">${tags}</span>
+        </div>
+        <div class="content">
+            ${content}
+        </div>
+    </article>
+</body>
+</html>`;
+        }
+
+        // Save post
+        document.getElementById('postForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const title = document.getElementById('title').value;
+            const tags = document.getElementById('tags').value;
+            const category = document.getElementById('category').value;
+            const content = document.getElementById('content').value;
+            
+            const postHtml = createPostTemplate(title, tags, category, content);
+            const filename = `${slugify(title)}.html`;
+            
+            try {
+                const response = await fetch('/api/save-post', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        filename,
+                        content: postHtml
+                    }),
+                });
+                
+                if (response.ok) {
+                    alert('Post saved successfully!');
+                    loadPosts();
+                } else {
+                    alert('Failed to save post');
+                }
+            } catch (error) {
+                console.error('Error saving post:', error);
+                alert('Error saving post');
+            }
+        });
+
+        // Load posts
+        async function loadPosts() {
+            try {
+                const response = await fetch('/api/posts');
+                const posts = await response.json();
+                
+                const postsHtml = posts.map(post => `
+                    <div class="post-item">
+                        <div class="post-info">
+                            <h3>${post.title}</h3>
+                            <p>${post.date} | ${post.category}</p>
+                        </div>
+                        <div class="post-actions">
+                            <button onclick="editPost('${post.id}')">Edit</button>
+                            <button onclick="deletePost('${post.id}')">Delete</button>
+                        </div>
+                    </div>
+                `).join('');
+                
+                document.getElementById('posts').innerHTML = postsHtml;
+            } catch (error) {
+                console.error('Error loading posts:', error);
+            }
+        }
+
+        // Load posts on page load
+        loadPosts();
+    </script>
+</body>
+</html>
