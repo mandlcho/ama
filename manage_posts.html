@@ -243,61 +243,91 @@
 
             async function savePost(event) {
                 event.preventDefault();
-                const title = postTitle.value;
-                const content = postContent.value;
-                const mediaUrl = postMedia.value.trim();
-                const currentFile = currentPostFile.value;
 
-                // Generate filename
-                const filename = currentFile || `${title.toLowerCase().replace(/\s+/g, '-')}.html`;
-                const fullPath = `posts/${filename}`;
+                // Get form elements
+                const titleInput = document.getElementById('postTitle');
+                const contentInput = document.getElementById('postContent');
+                const mediaInput = document.getElementById('postMedia');
 
-                // Construct HTML content with optional media
-                const mediaHTML = mediaUrl 
-                    ? (isImageURL(mediaUrl) 
-                        ? `<img src="${mediaUrl}" alt="${title}" class="post-media">` 
-                        : `<video src="${mediaUrl}" controls class="post-media"></video>`)
-                    : '';
+                // Validate inputs
+                if (!titleInput || !contentInput) {
+                    console.error('Form inputs not found');
+                    alert('Error: Form inputs are missing');
+                    return;
+                }
 
-                const postContent = `<!DOCTYPE html>
+                // Trim and validate title
+                const title = titleInput.value.trim();
+                if (!title) {
+                    alert('Please enter a post title');
+                    titleInput.focus();
+                    return;
+                }
+
+                // Generate filename (use title, convert to kebab-case)
+                const filename = `posts/${title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.html`;
+
+                // Construct post content with HTML structure
+                const postContent = `
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <title>${title}</title>
+    <meta name="description" content="${title}">
 </head>
 <body>
     <article>
         <h1>${title}</h1>
-        ${mediaHTML}
-        ${content}
+        
+        ${mediaInput.value ? `
+        <figure>
+            ${mediaInput.value.match(/\.(mp4|webm|ogg)$/) 
+                ? `<video controls src="${mediaInput.value}"></video>` 
+                : `<img src="${mediaInput.value}" alt="${title}">`}
+        </figure>
+        ` : ''}
+        
+        <div class="post-content">
+            ${contentInput.value.replace(/\n/g, '<br>')}
+        </div>
+        
+        <footer>
+            <time datetime="${new Date().toISOString()}">${new Date().toLocaleDateString()}</time>
+        </footer>
     </article>
 </body>
 </html>`;
 
                 try {
-                    // Check if file exists to get SHA for update
-                    let existingFile = null;
-                    try {
-                        existingFile = await githubAPI.getFileContent(fullPath);
-                    } catch (error) {
-                        // File doesn't exist, which is fine
+                    // Check if githubAPI is initialized
+                    if (!githubAPI) {
+                        throw new Error('GitHub API not initialized');
                     }
 
-                    const result = await githubAPI.createOrUpdateFile(
-                        fullPath, 
+                    // Attempt to save the post
+                    const response = await githubAPI.createOrUpdateFile(
+                        filename, 
                         postContent, 
-                        `${currentFile ? 'Update' : 'Create'} post: ${title}`,
-                        existingFile ? existingFile.sha : null
+                        `Create post: ${title}`
                     );
 
-                    if (result) {
-                        alert('Post saved successfully!');
-                        resetForm();
-                        fetchPosts();
-                    }
+                    console.log('Post saved successfully:', response);
+                    
+                    // Clear form after successful save
+                    titleInput.value = '';
+                    contentInput.value = '';
+                    mediaInput.value = '';
+                    currentPostFile.value = '';
+
+                    // Refresh post list
+                    await fetchPosts();
+
+                    // Show success message
+                    alert('Post saved successfully!');
                 } catch (error) {
                     console.error('Error saving post:', error);
-                    alert('Unable to save post. Check console for details.');
+                    alert(`Failed to save post: ${error.message}`);
                 }
             }
 
