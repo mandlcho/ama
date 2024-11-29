@@ -76,11 +76,14 @@
             opacity: 0;
             transform: translateY(20px);
             transition: all 0.3s ease;
+            min-height: 0;
+            overflow: hidden;
         }
 
         .results-container.visible {
             opacity: 1;
             transform: translateY(0);
+            min-height: 100px;
         }
 
         .post-card {
@@ -90,7 +93,14 @@
             border-radius: 12px;
             border: 1px solid var(--border-color);
             cursor: pointer;
-            transition: transform 0.2s ease;
+            transition: all 0.3s ease;
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .post-card.fade-out {
+            opacity: 0;
+            transform: translateY(10px);
         }
 
         .post-card:hover {
@@ -325,13 +335,15 @@
 
         // Function to display posts
         function displayPosts(posts, query = '') {
+            const container = document.getElementById('resultsContainer');
+            
             if (posts.length === 0 && query) {
-                resultsContainer.innerHTML = `
+                container.innerHTML = `
                     <div class="no-results">
                         No results found for "${query}"
                     </div>
                 `;
-                resultsContainer.classList.add('visible');
+                container.classList.add('visible');
             } else if (posts.length > 0) {
                 const postsHtml = posts.map(post => `
                     <div class="post-card" onclick="openArticle('${post.url}')">
@@ -347,11 +359,30 @@
                     </div>
                 `).join('');
                 
-                resultsContainer.innerHTML = postsHtml;
-                resultsContainer.classList.add('visible');
+                container.innerHTML = postsHtml;
+                container.classList.add('visible');
+                
+                // Trigger reflow to ensure animation works
+                container.offsetHeight;
+                
+                // Remove fade-out class from all cards
+                const cards = container.querySelectorAll('.post-card');
+                cards.forEach(card => card.classList.remove('fade-out'));
             } else {
-                resultsContainer.innerHTML = '';
-                resultsContainer.classList.remove('visible');
+                // Add fade-out class to all cards before removing
+                const cards = container.querySelectorAll('.post-card');
+                const fadePromises = Array.from(cards).map(card => {
+                    return new Promise(resolve => {
+                        card.classList.add('fade-out');
+                        card.addEventListener('transitionend', resolve, { once: true });
+                    });
+                });
+
+                // Wait for all fade animations to complete
+                Promise.all(fadePromises).then(() => {
+                    container.innerHTML = '';
+                    container.classList.remove('visible');
+                });
             }
         }
 
