@@ -370,6 +370,29 @@
     </div>
 
     <script>
+        // Theme toggle functionality
+        const html = document.documentElement;
+        const themeToggle = document.getElementById('themeToggle');
+
+        function toggleTheme() {
+            const currentTheme = html.getAttribute('data-theme');
+            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+            html.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+        }
+
+        // Set initial theme from localStorage
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        html.setAttribute('data-theme', savedTheme);
+
+        // Add event listener for theme toggle
+        themeToggle.addEventListener('click', toggleTheme);
+
+        // Global variables
+        let searchTimeout;
+        const searchInput = document.getElementById('searchInput');
+        const resultsContainer = document.getElementById('resultsContainer');
+
         // Function to fetch posts from JSON
         async function fetchPosts() {
             try {
@@ -407,13 +430,13 @@
 
         // Function to display posts with staggered animations
         function displayPosts(posts, query) {
-            const resultsContainer = document.getElementById('resultsContainer');
             resultsContainer.innerHTML = ''; // Clear previous results
             resultsContainer.classList.remove('visible');
 
             // No results handling
             if (posts.length === 0) {
                 resultsContainer.innerHTML = `<p>No posts found ${query ? `for "${query}"` : ''}.</p>`;
+                resultsContainer.classList.add('visible');
                 return;
             }
 
@@ -424,7 +447,7 @@
                 
                 // Create tags HTML
                 const tagsHtml = post.tags.map(tag => `<span class="tag">${tag}</span>`).join('');
-                
+
                 postCard.innerHTML = `
                     <h3>${post.title}</h3>
                     <p>${post.excerpt}</p>
@@ -449,7 +472,6 @@
         // Function to open article (placeholder, adjust as needed)
         async function openArticle(url) {
             try {
-                // This might need to be adjusted based on your actual file structure
                 const response = await fetch(url);
                 const html = await response.text();
                 
@@ -467,12 +489,13 @@
 
         // Event Listeners
         document.addEventListener('DOMContentLoaded', () => {
-            const searchInput = document.getElementById('searchInput');
-
             // Debounce the search to prevent too frequent updates
             searchInput.addEventListener('input', (e) => {
-                const query = e.target.value.trim();
-                searchPosts(query);
+                clearTimeout(searchTimeout);
+                searchTimeout = setTimeout(() => {
+                    const query = e.target.value.trim();
+                    searchPosts(query);
+                }, 200);
             });
 
             // Initial load of posts
