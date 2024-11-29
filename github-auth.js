@@ -1,10 +1,19 @@
 // GitHub API Authentication and Utility Functions
 class GitHubAPI {
     constructor(token, owner, repo) {
+        // Remove any full URL prefixes and extract just the repo name
         this.token = token;
-        this.owner = owner;
-        this.repo = repo;
-        this.baseURL = `https://api.github.com/repos/${owner}/${repo}/contents/`;
+        this.owner = owner.replace('https://github.com/', '');
+        this.repo = repo.replace('https://github.com/', '');
+        this.baseURL = `https://api.github.com/repos/${this.owner}/${this.repo}/contents/`;
+        
+        // Add logging to verify the constructed URL
+        console.log('GitHub API Configuration:', {
+            token: this.token ? '[REDACTED]' : 'Missing',
+            owner: this.owner,
+            repo: this.repo,
+            baseURL: this.baseURL
+        });
     }
 
     async getFileContent(path) {
@@ -35,7 +44,12 @@ class GitHubAPI {
 
     async listFiles(path = 'posts/') {
         try {
-            const response = await fetch(`${this.baseURL}${path}`, {
+            const fullPath = path.startsWith('/') ? path.slice(1) : path;
+            const url = `${this.baseURL}${fullPath}`;
+            
+            console.log('Attempting to list files from URL:', url);
+
+            const response = await fetch(url, {
                 headers: {
                     'Authorization': `token ${this.token}`,
                     'Accept': 'application/vnd.github.v3+json'
