@@ -292,188 +292,191 @@
     </div>
 
     <script>
-        const searchInput = document.getElementById('searchInput');
-        const resultsContainer = document.getElementById('resultsContainer');
-        const modal = document.getElementById('articleModal');
-        let searchTimeout;
+        // Ensure DOM is fully loaded before executing scripts
+        document.addEventListener('DOMContentLoaded', function() {
+            const searchInput = document.getElementById('searchInput');
+            const resultsContainer = document.getElementById('resultsContainer');
+            const html = document.documentElement;
+            const themeToggle = document.getElementById('themeToggle');
+            const modal = document.getElementById('articleModal');
 
-        // Function to search posts
-        function searchPosts(query) {
-            query = query.toLowerCase();
-            const posts = [
-                {
-                    title: "Getting Started with Mandl KB",
-                    date: "2024-01-20",
-                    category: "Guide",
-                    tags: ["guide", "introduction", "getting started"],
-                    url: "posts/getting-started.html",
-                    excerpt: "Welcome to Mandl KB! This is your personal knowledge base search engine. Learn how to effectively search and navigate through the content."
-                },
-                {
-                    title: "Python Tips and Best Practices",
-                    date: "2024-01-21",
-                    category: "Programming",
-                    tags: ["python", "programming", "tips", "best practices"],
-                    url: "posts/python-tips.html",
-                    excerpt: "Essential Python tips and best practices every developer should know, including virtual environments, PEP 8, and documentation."
-                },
-                {
-                    title: "Git Workflow Guide",
-                    date: "2024-01-22",
-                    category: "Development",
-                    tags: ["git", "version control", "workflow"],
-                    url: "posts/git-workflow.html",
-                    excerpt: "A practical guide to using Git effectively in your development workflow, covering basic commands and best practices."
+            // Theme toggle functionality
+            function toggleTheme() {
+                const currentTheme = html.getAttribute('data-theme');
+                const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+                html.setAttribute('data-theme', newTheme);
+                localStorage.setItem('theme', newTheme);
+            }
+
+            // Set initial theme from localStorage
+            const savedTheme = localStorage.getItem('theme') || 'light';
+            html.setAttribute('data-theme', savedTheme);
+
+            // Add event listener for theme toggle
+            themeToggle.addEventListener('click', toggleTheme);
+
+            let searchTimeout;
+
+            // Function to search posts
+            function searchPosts(query) {
+                query = query.toLowerCase();
+                const posts = [
+                    {
+                        title: "Getting Started with Mandl KB",
+                        date: "2024-01-20",
+                        category: "Guide",
+                        tags: ["guide", "introduction", "getting started"],
+                        url: "posts/getting-started.html",
+                        excerpt: "Welcome to Mandl KB! This is your personal knowledge base search engine. Learn how to effectively search and navigate through the content."
+                    },
+                    {
+                        title: "Python Tips and Best Practices",
+                        date: "2024-01-21",
+                        category: "Programming",
+                        tags: ["python", "programming", "tips", "best practices"],
+                        url: "posts/python-tips.html",
+                        excerpt: "Essential Python tips and best practices every developer should know, including virtual environments, PEP 8, and documentation."
+                    },
+                    {
+                        title: "Git Workflow Guide",
+                        date: "2024-01-22",
+                        category: "Development",
+                        tags: ["git", "version control", "workflow"],
+                        url: "posts/git-workflow.html",
+                        excerpt: "A practical guide to using Git effectively in your development workflow, covering basic commands and best practices."
+                    }
+                ];
+
+                const filteredPosts = query ? posts.filter(post => {
+                    return post.title.toLowerCase().includes(query) ||
+                           post.category.toLowerCase().includes(query) ||
+                           post.tags.some(tag => tag.toLowerCase().includes(query)) ||
+                           post.excerpt.toLowerCase().includes(query);
+                }) : [];
+
+                displayPosts(filteredPosts, query);
+            }
+
+            // Function to display posts with staggered animations
+            function displayPosts(posts, query = '') {
+                const container = document.getElementById('resultsContainer');
+                
+                if (posts.length === 0 && query) {
+                    // Fade out existing cards first
+                    fadeOutCards().then(() => {
+                        container.innerHTML = `
+                            <div class="no-results">
+                                No results found for "${query}"
+                            </div>
+                        `;
+                        container.classList.add('visible');
+                    });
+                } else if (posts.length > 0) {
+                    // Fade out existing cards first
+                    fadeOutCards().then(() => {
+                        const postsHtml = posts.map(post => `
+                            <div class="post-card" onclick="openArticle('${post.url}')">
+                                <h2>${post.title}</h2>
+                                <div class="post-meta">
+                                    <span>${new Date(post.date).toLocaleDateString()}</span> | 
+                                    <span>${post.category}</span>
+                                </div>
+                                <div class="tags">
+                                    ${post.tags.map(tag => `<span class="tag">${tag}</span>`).join('')}
+                                </div>
+                                <p>${post.excerpt}</p>
+                            </div>
+                        `).join('');
+                        
+                        container.innerHTML = postsHtml;
+                        container.classList.add('visible');
+                        
+                        // Trigger reflow to ensure animation works
+                        container.offsetHeight;
+                        
+                        // Stagger the fade-in of cards
+                        const cards = container.querySelectorAll('.post-card');
+                        cards.forEach((card, index) => {
+                            setTimeout(() => {
+                                card.classList.add('visible');
+                            }, index * 100); // Stagger each card by 100ms
+                        });
+                    });
+                } else {
+                    fadeOutCards().then(() => {
+                        container.innerHTML = '';
+                        container.classList.remove('visible');
+                    });
                 }
-            ];
+            }
 
-            const filteredPosts = query ? posts.filter(post => {
-                return post.title.toLowerCase().includes(query) ||
-                       post.category.toLowerCase().includes(query) ||
-                       post.tags.some(tag => tag.toLowerCase().includes(query)) ||
-                       post.excerpt.toLowerCase().includes(query);
-            }) : [];
+            // Function to fade out all cards with a promise
+            function fadeOutCards() {
+                const container = document.getElementById('resultsContainer');
+                const cards = container.querySelectorAll('.post-card');
+                
+                if (cards.length === 0) {
+                    return Promise.resolve();
+                }
 
-            displayPosts(filteredPosts, query);
-        }
-
-        // Function to display posts with staggered animations
-        function displayPosts(posts, query = '') {
-            const container = document.getElementById('resultsContainer');
-            
-            if (posts.length === 0 && query) {
-                // Fade out existing cards first
-                fadeOutCards().then(() => {
-                    container.innerHTML = `
-                        <div class="no-results">
-                            No results found for "${query}"
-                        </div>
-                    `;
-                    container.classList.add('visible');
-                });
-            } else if (posts.length > 0) {
-                // Fade out existing cards first
-                fadeOutCards().then(() => {
-                    const postsHtml = posts.map(post => `
-                        <div class="post-card" onclick="openArticle('${post.url}')">
-                            <h2>${post.title}</h2>
-                            <div class="post-meta">
-                                <span>${new Date(post.date).toLocaleDateString()}</span> | 
-                                <span>${post.category}</span>
-                            </div>
-                            <div class="tags">
-                                ${post.tags.map(tag => `<span class="tag">${tag}</span>`).join('')}
-                            </div>
-                            <p>${post.excerpt}</p>
-                        </div>
-                    `).join('');
-                    
-                    container.innerHTML = postsHtml;
-                    container.classList.add('visible');
-                    
-                    // Trigger reflow to ensure animation works
-                    container.offsetHeight;
-                    
-                    // Stagger the fade-in of cards
-                    const cards = container.querySelectorAll('.post-card');
-                    cards.forEach((card, index) => {
+                const fadePromises = Array.from(cards).map((card, index) => {
+                    return new Promise(resolve => {
                         setTimeout(() => {
-                            card.classList.add('visible');
-                        }, index * 100); // Stagger each card by 100ms
+                            card.classList.add('fade-out');
+                            card.addEventListener('transitionend', resolve, { once: true });
+                        }, index * 50); // Stagger the fade-out by 50ms
                     });
                 });
-            } else {
-                fadeOutCards().then(() => {
-                    container.innerHTML = '';
-                    container.classList.remove('visible');
-                });
-            }
-        }
 
-        // Function to fade out all cards with a promise
-        function fadeOutCards() {
-            const container = document.getElementById('resultsContainer');
-            const cards = container.querySelectorAll('.post-card');
-            
-            if (cards.length === 0) {
-                return Promise.resolve();
+                return Promise.all(fadePromises);
             }
 
-            const fadePromises = Array.from(cards).map((card, index) => {
-                return new Promise(resolve => {
-                    setTimeout(() => {
-                        card.classList.add('fade-out');
-                        card.addEventListener('transitionend', resolve, { once: true });
-                    }, index * 50); // Stagger the fade-out by 50ms
-                });
+            // Function to open article in modal
+            async function openArticle(url) {
+                try {
+                    const response = await fetch(url);
+                    const html = await response.text();
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(html, 'text/html');
+                    const article = doc.querySelector('article');
+                    
+                    if (article) {
+                        document.getElementById('modalContent').innerHTML = article.outerHTML;
+                        modal.style.display = 'block';
+                        document.body.style.overflow = 'hidden';
+                    }
+                } catch (error) {
+                    console.error('Error loading article:', error);
+                }
+            }
+
+            // Function to close modal
+            function closeModal() {
+                modal.style.display = 'none';
+                document.body.style.overflow = 'auto';
+            }
+
+            // Close modal when clicking outside
+            window.onclick = function(event) {
+                if (event.target === modal) {
+                    closeModal();
+                }
+            }
+
+            // Debounce the search to prevent too frequent updates
+            searchInput.addEventListener('input', (e) => {
+                clearTimeout(searchTimeout);
+                searchTimeout = setTimeout(() => {
+                    const query = e.target.value.trim();
+                    searchPosts(query);
+                }, 200); // Slightly longer delay for smoother transitions
             });
 
-            return Promise.all(fadePromises);
-        }
-
-        // Function to open article in modal
-        async function openArticle(url) {
-            try {
-                const response = await fetch(url);
-                const html = await response.text();
-                const parser = new DOMParser();
-                const doc = parser.parseFromString(html, 'text/html');
-                const article = doc.querySelector('article');
-                
-                if (article) {
-                    document.getElementById('modalContent').innerHTML = article.outerHTML;
-                    modal.style.display = 'block';
-                    document.body.style.overflow = 'hidden';
-                }
-            } catch (error) {
-                console.error('Error loading article:', error);
-            }
-        }
-
-        // Function to close modal
-        function closeModal() {
-            modal.style.display = 'none';
-            document.body.style.overflow = 'auto';
-        }
-
-        // Close modal when clicking outside
-        window.onclick = function(event) {
-            if (event.target === modal) {
-                closeModal();
-            }
-        }
-
-        // Debounce the search to prevent too frequent updates
-        let searchTimeout;
-        searchInput.addEventListener('input', (e) => {
-            clearTimeout(searchTimeout);
-            searchTimeout = setTimeout(() => {
-                const query = e.target.value.trim();
-                searchPosts(query);
-            }, 200); // Slightly longer delay for smoother transitions
+            // Focus search input when page loads
+            window.addEventListener('load', () => {
+                searchInput.focus();
+            });
         });
-
-        // Focus search input when page loads
-        window.addEventListener('load', () => {
-            searchInput.focus();
-        });
-
-        // Theme toggle functionality
-        const themeToggle = document.getElementById('themeToggle');
-        const html = document.documentElement;
-        
-        function toggleTheme() {
-            const currentTheme = html.getAttribute('data-theme');
-            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
-            html.setAttribute('data-theme', newTheme);
-            localStorage.setItem('theme', newTheme);
-        }
-
-        // Set initial theme from localStorage
-        const savedTheme = localStorage.getItem('theme') || 'light';
-        html.setAttribute('data-theme', savedTheme);
-
-        themeToggle.addEventListener('click', toggleTheme);
     </script>
 </body>
 </html>
