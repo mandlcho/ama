@@ -15,10 +15,52 @@ class GitHubAPI {
                     'Accept': 'application/vnd.github.v3+json'
                 }
             });
+            
+            if (!response.ok) {
+                const errorBody = await response.text();
+                console.error('GitHub API Error:', {
+                    status: response.status,
+                    statusText: response.statusText,
+                    body: errorBody
+                });
+                throw new Error(`GitHub API Error: ${response.status} ${response.statusText}`);
+            }
+            
             return await response.json();
         } catch (error) {
             console.error('Error fetching file:', error);
-            return null;
+            throw error;
+        }
+    }
+
+    async listFiles(path = 'posts/') {
+        try {
+            const response = await fetch(`${this.baseURL}${path}`, {
+                headers: {
+                    'Authorization': `token ${this.token}`,
+                    'Accept': 'application/vnd.github.v3+json'
+                }
+            });
+            
+            if (!response.ok) {
+                const errorBody = await response.text();
+                console.error('GitHub API Error:', {
+                    status: response.status,
+                    statusText: response.statusText,
+                    body: errorBody
+                });
+                throw new Error(`GitHub API Error: ${response.status} ${response.statusText}`);
+            }
+            
+            const files = await response.json();
+            
+            // Additional logging to understand file structure
+            console.log('GitHub Files Response:', files);
+            
+            return files;
+        } catch (error) {
+            console.error('Error listing files:', error);
+            throw error;
         }
     }
 
@@ -43,10 +85,20 @@ class GitHubAPI {
                 body: JSON.stringify(payload)
             });
 
+            if (!response.ok) {
+                const errorBody = await response.text();
+                console.error('GitHub API Error:', {
+                    status: response.status,
+                    statusText: response.statusText,
+                    body: errorBody
+                });
+                throw new Error(`GitHub API Error: ${response.status} ${response.statusText}`);
+            }
+
             return await response.json();
         } catch (error) {
             console.error('Error creating/updating file:', error);
-            return null;
+            throw error;
         }
     }
 
@@ -65,25 +117,20 @@ class GitHubAPI {
                 })
             });
 
+            if (!response.ok) {
+                const errorBody = await response.text();
+                console.error('GitHub API Error:', {
+                    status: response.status,
+                    statusText: response.statusText,
+                    body: errorBody
+                });
+                throw new Error(`GitHub API Error: ${response.status} ${response.statusText}`);
+            }
+
             return await response.json();
         } catch (error) {
             console.error('Error deleting file:', error);
-            return null;
-        }
-    }
-
-    async listFiles(path = 'posts/') {
-        try {
-            const response = await fetch(`${this.baseURL}${path}`, {
-                headers: {
-                    'Authorization': `token ${this.token}`,
-                    'Accept': 'application/vnd.github.v3+json'
-                }
-            });
-            return await response.json();
-        } catch (error) {
-            console.error('Error listing files:', error);
-            return [];
+            throw error;
         }
     }
 }

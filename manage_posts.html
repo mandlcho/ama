@@ -154,22 +154,53 @@
                     const files = await githubAPI.listFiles('posts/');
                     postList.innerHTML = ''; 
                     
-                    files.filter(file => file.name.endsWith('.html'))
-                        .forEach(file => {
-                            const listItem = document.createElement('li');
-                            listItem.className = 'post-item';
-                            listItem.innerHTML = `
-                                <span>${file.name}</span>
-                                <div class="post-actions">
-                                    <button onclick="editPost('${file.name}', '${file.sha}')">Edit</button>
-                                    <button onclick="deletePost('${file.name}', '${file.sha}')">Delete</button>
-                                </div>
-                            `;
-                            postList.appendChild(listItem);
-                        });
+                    // Log the raw files response for debugging
+                    console.log('Raw files response:', files);
+
+                    // Ensure files is an array and filter HTML files
+                    const htmlFiles = Array.isArray(files) 
+                        ? files.filter(file => file.name && file.name.endsWith('.html'))
+                        : [];
+
+                    console.log('Filtered HTML files:', htmlFiles);
+
+                    htmlFiles.forEach(file => {
+                        const listItem = document.createElement('li');
+                        listItem.className = 'post-item';
+                        listItem.innerHTML = `
+                            <span>${file.name}</span>
+                            <div class="post-actions">
+                                <button onclick="editPost('${file.name}', '${file.sha || ''}')">Edit</button>
+                                <button onclick="deletePost('${file.name}', '${file.sha || ''}')">Delete</button>
+                            </div>
+                        `;
+                        postList.appendChild(listItem);
+                    });
+
+                    // If no files found, show a message
+                    if (htmlFiles.length === 0) {
+                        const noPostsItem = document.createElement('li');
+                        noPostsItem.textContent = 'No posts found. Create your first post!';
+                        postList.appendChild(noPostsItem);
+                    }
                 } catch (error) {
-                    console.error('Error fetching posts:', error);
-                    alert('Unable to fetch posts. Check console for details.');
+                    console.error('Detailed error fetching posts:', error);
+                    
+                    // More informative error handling
+                    const errorItem = document.createElement('li');
+                    errorItem.innerHTML = `
+                        <strong>Error Loading Posts:</strong>
+                        <p>${error.message}</p>
+                        <p>Possible reasons:
+                            <ul>
+                                <li>Incorrect GitHub Token</li>
+                                <li>Invalid Repository Name</li>
+                                <li>No 'posts' directory exists</li>
+                                <li>Network connectivity issues</li>
+                            </ul>
+                        </p>
+                    `;
+                    postList.appendChild(errorItem);
                 }
             }
 
