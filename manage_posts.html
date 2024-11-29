@@ -49,11 +49,15 @@
             padding: 20px; 
             border-radius: 5px; 
         }
-        #postTitle, #postContent { 
+        #postTitle, #postContent, #postMedia { 
             width: 100%; 
             padding: 10px; 
             margin-bottom: 10px; 
             box-sizing: border-box;
+        }
+        .media-preview {
+            max-width: 100%;
+            margin-bottom: 10px;
         }
         #currentPostFile { display: none; }
     </style>
@@ -85,6 +89,13 @@
                 <input type="hidden" id="currentPostFile" name="currentPostFile">
                 <input type="text" id="postTitle" placeholder="Post Title" required>
                 <textarea id="postContent" rows="10" placeholder="Post Content" required></textarea>
+                
+                <div>
+                    <label>Add Media (Image/Video URL):</label>
+                    <input type="text" id="postMedia" placeholder="Enter media URL (optional)">
+                    <div id="mediaPreview"></div>
+                </div>
+                
                 <button type="submit">Save Post</button>
                 <button type="button" id="cancelEdit">Cancel</button>
             </form>
@@ -92,153 +103,207 @@
     </div>
 
     <script>
-        let githubAPI = null;
+        document.addEventListener('DOMContentLoaded', function() {
+            let githubAPI = null;
+            const postList = document.getElementById('postList');
+            const postForm = document.getElementById('postForm');
+            const postTitle = document.getElementById('postTitle');
+            const postContent = document.getElementById('postContent');
+            const postMedia = document.getElementById('postMedia');
+            const mediaPreview = document.getElementById('mediaPreview');
+            const currentPostFile = document.getElementById('currentPostFile');
 
-        function initializeGitHubAPI() {
-            const token = document.getElementById('githubToken').value;
-            const owner = document.getElementById('githubOwner').value;
-            const repo = document.getElementById('githubRepo').value;
+            function initializeGitHubAPI() {
+                const token = document.getElementById('githubToken').value;
+                const owner = document.getElementById('githubOwner').value;
+                const repo = document.getElementById('githubRepo').value;
 
-            if (!token || !owner || !repo) {
-                alert('Please fill in all authentication details');
-                return;
+                if (!token || !owner || !repo) {
+                    alert('Please fill in all authentication details');
+                    return;
+                }
+
+                githubAPI = new GitHubAPI(token, owner, repo);
+                
+                document.getElementById('loginSection').style.display = 'none';
+                document.getElementById('postManager').style.display = 'block';
+
+                fetchPosts();
             }
 
-            githubAPI = new GitHubAPI(token, owner, repo);
-            
-            // Hide login section, show post manager
-            document.getElementById('loginSection').style.display = 'none';
-            document.getElementById('postManager').style.display = 'block';
+            // Media URL preview
+            postMedia.addEventListener('input', function() {
+                const url = this.value.trim();
+                if (url) {
+                    mediaPreview.innerHTML = isImageURL(url) 
+                        ? `<img src="${url}" alt="Media Preview" class="media-preview">`
+                        : `<video src="${url}" controls class="media-preview"></video>`;
+                } else {
+                    mediaPreview.innerHTML = '';
+                }
+            });
 
-            // Fetch and display posts
-            fetchPosts();
-        }
+            function isImageURL(url) {
+                return /\.(jpg|jpeg|png|gif|bmp|webp)$/i.test(url);
+            }
 
-        async function fetchPosts() {
-            if (!githubAPI) return;
+            async function fetchPosts() {
+                if (!githubAPI) return;
 
-            try {
-                const files = await githubAPI.listFiles('posts/');
-                const postList = document.getElementById('postList');
-                postList.innerHTML = ''; // Clear existing list
-                
-                files.forEach(file => {
-                    if (file.name.endsWith('.html')) {
-                        const listItem = document.createElement('li');
-                        listItem.className = 'post-item';
-                        listItem.innerHTML = `
-                            <span>${file.name}</span>
-                            <div class="post-actions">
-                                <button onclick="editPost('${file.name}')">Edit</button>
-                                <button onclick="deletePost('${file.name}', '${file.sha}')">Delete</button>
-                            </div>
-                        `;
-                        postList.appendChild(listItem);
+                try {
+                    const files = await githubAPI.listFiles('posts/');
+                    postList.innerHTML = ''; 
+                    
+                    files.filter(file => file.name.endsWith('.html'))
+                        .forEach(file => {
+                            const listItem = document.createElement('li');
+                            listItem.className = 'post-item';
+                            listItem.innerHTML = `
+                                <span>${file.name}</span>
+                                <div class="post-actions">
+                                    <button onclick="editPost('${file.name}', '${file.sha}')">Edit</button>
+                                    <button onclick="deletePost('${file.name}', '${file.sha}')">Delete</button>
+                                </div>
+                            `;
+                            postList.appendChild(listItem);
+                        });
+                } catch (error) {
+                    console.error('Error fetching posts:', error);
+                    alert('Unable to fetch posts. Check console for details.');
+                }
+            }
+
+            async function editPost(filename, sha) {
+                try {
+                    const fileData = await githubAPI.getFileContent(`posts/${filename}`);
+                    if (!fileData) return;
+
+                    const content = atob(fileData.content);
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(content, 'text/html');
+                    
+                    // Extract title, content, and media
+                    const title = doc.querySelector('title') ? doc.querySelector('title').textContent : filename.replace('.html', '');
+                    const body = doc.body.innerHTML;
+                    
+                    // Try to extract media URL
+                    const mediaElement = doc.querySelector('img, video');
+                    const mediaUrl = mediaElement ? mediaElement.src : '';
+
+                    postTitle.value = title;
+                    postContent.value = body;
+                    postMedia.value = mediaUrl;
+                    
+                    // Update media preview
+                    if (mediaUrl) {
+                        mediaPreview.innerHTML = mediaElement.tagName.toLowerCase() === 'img'
+                            ? `<img src="${mediaUrl}" alt="Media Preview" class="media-preview">`
+                            : `<video src="${mediaUrl}" controls class="media-preview"></video>`;
+                    } else {
+                        mediaPreview.innerHTML = '';
                     }
-                });
-            } catch (error) {
-                console.error('Error fetching posts:', error);
-                alert('Unable to fetch posts. Check console for details.');
+
+                    currentPostFile.value = filename;
+                } catch (error) {
+                    console.error('Error editing post:', error);
+                    alert('Unable to edit post. Check console for details.');
+                }
             }
-        }
 
-        async function editPost(filename) {
-            try {
-                const fileData = await githubAPI.getFileContent(`posts/${filename}`);
-                if (!fileData) return;
+            async function savePost(event) {
+                event.preventDefault();
+                const title = postTitle.value;
+                const content = postContent.value;
+                const mediaUrl = postMedia.value.trim();
+                const currentFile = currentPostFile.value;
 
-                const content = atob(fileData.content);
-                const parser = new DOMParser();
-                const doc = parser.parseFromString(content, 'text/html');
-                
-                const title = doc.querySelector('title') ? doc.querySelector('title').textContent : filename.replace('.html', '');
-                const body = doc.body.innerHTML;
+                // Generate filename
+                const filename = currentFile || `${title.toLowerCase().replace(/\s+/g, '-')}.html`;
+                const fullPath = `posts/${filename}`;
 
-                document.getElementById('postTitle').value = title;
-                document.getElementById('postContent').value = body;
-                document.getElementById('currentPostFile').value = filename;
-            } catch (error) {
-                console.error('Error editing post:', error);
-                alert('Unable to edit post. Check console for details.');
-            }
-        }
+                // Construct HTML content with optional media
+                const mediaHTML = mediaUrl 
+                    ? (isImageURL(mediaUrl) 
+                        ? `<img src="${mediaUrl}" alt="${title}" class="post-media">` 
+                        : `<video src="${mediaUrl}" controls class="post-media"></video>`)
+                    : '';
 
-        async function savePost(event) {
-            event.preventDefault();
-            const title = document.getElementById('postTitle').value;
-            const content = document.getElementById('postContent').value;
-            const currentFile = document.getElementById('currentPostFile').value;
-
-            const filename = currentFile || `${title.toLowerCase().replace(/\s+/g, '-')}.html`;
-            const fullPath = `posts/${filename}`;
-
-            const postContent = `<!DOCTYPE html>
+                const postContent = `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <title>${title}</title>
 </head>
 <body>
-    ${content}
+    <article>
+        <h1>${title}</h1>
+        ${mediaHTML}
+        ${content}
+    </article>
 </body>
 </html>`;
 
-            try {
-                // Check if file exists to get SHA for update
-                let existingFile = null;
                 try {
-                    existingFile = await githubAPI.getFileContent(fullPath);
-                } catch (error) {
-                    // File doesn't exist, which is fine
-                }
+                    // Check if file exists to get SHA for update
+                    let existingFile = null;
+                    try {
+                        existingFile = await githubAPI.getFileContent(fullPath);
+                    } catch (error) {
+                        // File doesn't exist, which is fine
+                    }
 
-                const result = await githubAPI.createOrUpdateFile(
-                    fullPath, 
-                    postContent, 
-                    `${currentFile ? 'Update' : 'Create'} post: ${title}`,
-                    existingFile ? existingFile.sha : null
-                );
-
-                if (result) {
-                    alert('Post saved successfully!');
-                    resetForm();
-                    fetchPosts();
-                }
-            } catch (error) {
-                console.error('Error saving post:', error);
-                alert('Unable to save post. Check console for details.');
-            }
-        }
-
-        async function deletePost(filename, sha) {
-            if (confirm(`Are you sure you want to delete ${filename}?`)) {
-                try {
-                    const result = await githubAPI.deleteFile(
-                        `posts/${filename}`, 
-                        sha, 
-                        `Delete post: ${filename}`
+                    const result = await githubAPI.createOrUpdateFile(
+                        fullPath, 
+                        postContent, 
+                        `${currentFile ? 'Update' : 'Create'} post: ${title}`,
+                        existingFile ? existingFile.sha : null
                     );
 
                     if (result) {
-                        alert('Post deleted successfully!');
+                        alert('Post saved successfully!');
+                        resetForm();
                         fetchPosts();
                     }
                 } catch (error) {
-                    console.error('Error deleting post:', error);
-                    alert('Unable to delete post. Check console for details.');
+                    console.error('Error saving post:', error);
+                    alert('Unable to save post. Check console for details.');
                 }
             }
-        }
 
-        function resetForm() {
-            document.getElementById('postForm').reset();
-            document.getElementById('currentPostFile').value = '';
-        }
+            async function deletePost(filename, sha) {
+                if (confirm(`Are you sure you want to delete ${filename}?`)) {
+                    try {
+                        const result = await githubAPI.deleteFile(
+                            `posts/${filename}`, 
+                            sha, 
+                            `Delete post: ${filename}`
+                        );
 
-        // Setup event listeners
-        document.addEventListener('DOMContentLoaded', () => {
-            document.getElementById('postForm').addEventListener('submit', savePost);
+                        if (result) {
+                            alert('Post deleted successfully!');
+                            fetchPosts();
+                        }
+                    } catch (error) {
+                        console.error('Error deleting post:', error);
+                        alert('Unable to delete post. Check console for details.');
+                    }
+                }
+            }
+
+            function resetForm() {
+                postForm.reset();
+                currentPostFile.value = '';
+                mediaPreview.innerHTML = '';
+            }
+
+            // Setup event listeners
+            postForm.addEventListener('submit', savePost);
             document.getElementById('cancelEdit').addEventListener('click', resetForm);
+
+            // Expose functions to global scope for onclick handlers
+            window.editPost = editPost;
+            window.deletePost = deletePost;
+            window.initializeGitHubAPI = initializeGitHubAPI;
         });
     </script>
 </body>
