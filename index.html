@@ -114,15 +114,29 @@
             margin-top: 20px;
         }
 
+        /* Pastel colors for light mode */
+        [data-theme="light"] .tag:nth-child(5n+1) { background-color: #FFE5E5; color: #666; }
+        [data-theme="light"] .tag:nth-child(5n+2) { background-color: #E5FFE5; color: #666; }
+        [data-theme="light"] .tag:nth-child(5n+3) { background-color: #E5E5FF; color: #666; }
+        [data-theme="light"] .tag:nth-child(5n+4) { background-color: #FFE5FF; color: #666; }
+        [data-theme="light"] .tag:nth-child(5n+5) { background-color: #FFFFE5; color: #666; }
+
+        /* Darker pastel colors for dark mode */
+        [data-theme="dark"] .tag:nth-child(5n+1) { background-color: #4a2f2f; color: #ffd1d1; }
+        [data-theme="dark"] .tag:nth-child(5n+2) { background-color: #2f4a2f; color: #d1ffd1; }
+        [data-theme="dark"] .tag:nth-child(5n+3) { background-color: #2f2f4a; color: #d1d1ff; }
+        [data-theme="dark"] .tag:nth-child(5n+4) { background-color: #4a2f4a; color: #ffd1ff; }
+        [data-theme="dark"] .tag:nth-child(5n+5) { background-color: #4a4a2f; color: #ffffd1; }
+
         .tag {
             display: inline-block;
             padding: 4px 12px;
             border-radius: 4px;
             margin: 0 8px 8px 0;
             font-size: 0.85em;
-            color: var(--text-color);
             font-weight: 500;
             letter-spacing: -0.2px;
+            transition: all 0.3s ease;
         }
 
         .post-card p {
@@ -139,13 +153,6 @@
             border-radius: 12px;
             border: 1px solid var(--border-color);
         }
-
-        /* Pastel colors for tags */
-        .tag:nth-child(5n+1) { background-color: #FFE5E5; }
-        .tag:nth-child(5n+2) { background-color: #E5FFE5; }
-        .tag:nth-child(5n+3) { background-color: #E5E5FF; }
-        .tag:nth-child(5n+4) { background-color: #FFE5FF; }
-        .tag:nth-child(5n+5) { background-color: #FFFFE5; }
 
         /* Modal styles */
         .modal {
