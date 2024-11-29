@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blog Post Manager</title>
+    <script src="github-auth.js"></script>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            max-width: 800px; 
+            margin: 20px auto; 
+            line-height: 1.6; 
+            padding: 0 15px;
+        }
+        .login-container {
+            display: flex;
+            flex-direction: column;
+            max-width: 300px;
+            margin: 0 auto;
+        }
+        .login-container input {
+            margin: 10px 0;
+            padding: 10px;
+        }
+        #postManager {
+            display: none;
+        }
+        .post-list { 
+            margin-bottom: 20px; 
+            border: 1px solid #ddd;
+            padding: 15px;
+            border-radius: 5px;
+        }
+        .post-item { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            padding: 10px; 
+            border-bottom: 1px solid #eee; 
+        }
+        .post-actions button { 
+            margin-left: 10px; 
+            cursor: pointer; 
+            padding: 5px 10px;
+        }
+        .post-editor { 
+            background-color: #f4f4f4; 
+            padding: 20px; 
+            border-radius: 5px; 
+        }
+        #postTitle, #postContent { 
+            width: 100%; 
+            padding: 10px; 
+            margin-bottom: 10px; 
+            box-sizing: border-box;
+        }
+        #currentPostFile { display: none; }
+    </style>
+</head>
+<body>
+    <div id="loginSection">
+        <div class="login-container">
+            <h2>GitHub Authentication</h2>
+            <input type="text" id="githubToken" placeholder="GitHub Personal Access Token">
+            <input type="text" id="githubOwner" placeholder="GitHub Username">
+            <input type="text" id="githubRepo" placeholder="Repository Name">
+            <button onclick="initializeGitHubAPI()">Login</button>
+        </div>
+    </div>
+
+    <div id="postManager" style="display:none;">
+        <h1>Blog Post Manager</h1>
+        
+        <div class="post-list">
+            <h2>Existing Posts</h2>
+            <ul id="postList">
+                <!-- Posts will be dynamically loaded here -->
+            </ul>
+        </div>
+
+        <div class="post-editor">
+            <h2>Create/Edit Post</h2>
+            <form id="postForm">
+                <input type="hidden" id="currentPostFile" name="currentPostFile">
+                <input type="text" id="postTitle" placeholder="Post Title" required>
+                <textarea id="postContent" rows="10" placeholder="Post Content" required></textarea>
+                <button type="submit">Save Post</button>
+                <button type="button" id="cancelEdit">Cancel</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        let githubAPI = null;
+
+        function initializeGitHubAPI() {
+            const token = document.getElementById('githubToken').value;
+            const owner = document.getElementById('githubOwner').value;
+            const repo = document.getElementById('githubRepo').value;
+
+            if (!token || !owner || !repo) {
+                alert('Please fill in all authentication details');
+                return;
+            }
+
+            githubAPI = new GitHubAPI(token, owner, repo);
+            
+            // Hide login section, show post manager
+            document.getElementById('loginSection').style.display = 'none';
+            document.getElementById('postManager').style.display = 'block';
+
+            // Fetch and display posts
+            fetchPosts();
+        }
+
+        async function fetchPosts() {
+            if (!githubAPI) return;
+
+            try {
+                const files = await githubAPI.listFiles('posts/');
+                const postList = document.getElementById('postList');
+                postList.innerHTML = ''; // Clear existing list
+                
+                files.forEach(file => {
+                    if (file.name.endsWith('.html')) {
+                        const listItem = document.createElement('li');
+                        listItem.className = 'post-item';
+                        listItem.innerHTML = `
+                            <span>${file.name}</span>
+                            <div class="post-actions">
+                                <button onclick="editPost('${file.name}')">Edit</button>
+                                <button onclick="deletePost('${file.name}', '${file.sha}')">Delete</button>
+                            </div>
+                        `;
+                        postList.appendChild(listItem);
+                    }
+                });
+            } catch (error) {
+                console.error('Error fetching posts:', error);
+                alert('Unable to fetch posts. Check console for details.');
+            }
+        }
+
+        async function editPost(filename) {
+            try {
+                const fileData = await githubAPI.getFileContent(`posts/${filename}`);
+                if (!fileData) return;
+
+                const content = atob(fileData.content);
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(content, 'text/html');
+                
+                const title = doc.querySelector('title') ? doc.querySelector('title').textContent : filename.replace('.html', '');
+                const body = doc.body.innerHTML;
+
+                document.getElementById('postTitle').value = title;
+                document.getElementById('postContent').value = body;
+                document.getElementById('currentPostFile').value = filename;
+            } catch (error) {
+                console.error('Error editing post:', error);
+                alert('Unable to edit post. Check console for details.');
+            }
+        }
+
+        async function savePost(event) {
+            event.preventDefault();
+            const title = document.getElementById('postTitle').value;
+            const content = document.getElementById('postContent').value;
+            const currentFile = document.getElementById('currentPostFile').value;
+
+            const filename = currentFile || `${title.toLowerCase().replace(/\s+/g, '-')}.html`;
+            const fullPath = `posts/${filename}`;
+
+            const postContent = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>${title}</title>
+</head>
+<body>
+    ${content}
+</body>
+</html>`;
+
+            try {
+                // Check if file exists to get SHA for update
+                let existingFile = null;
+                try {
+                    existingFile = await githubAPI.getFileContent(fullPath);
+                } catch (error) {
+                    // File doesn't exist, which is fine
+                }
+
+                const result = await githubAPI.createOrUpdateFile(
+                    fullPath, 
+                    postContent, 
+                    `${currentFile ? 'Update' : 'Create'} post: ${title}`,
+                    existingFile ? existingFile.sha : null
+                );
+
+                if (result) {
+                    alert('Post saved successfully!');
+                    resetForm();
+                    fetchPosts();
+                }
+            } catch (error) {
+                console.error('Error saving post:', error);
+                alert('Unable to save post. Check console for details.');
+            }
+        }
+
+        async function deletePost(filename, sha) {
+            if (confirm(`Are you sure you want to delete ${filename}?`)) {
+                try {
+                    const result = await githubAPI.deleteFile(
+                        `posts/${filename}`, 
+                        sha, 
+                        `Delete post: ${filename}`
+                    );
+
+                    if (result) {
+                        alert('Post deleted successfully!');
+                        fetchPosts();
+                    }
+                } catch (error) {
+                    console.error('Error deleting post:', error);
+                    alert('Unable to delete post. Check console for details.');
+                }
+            }
+        }
+
+        function resetForm() {
+            document.getElementById('postForm').reset();
+            document.getElementById('currentPostFile').value = '';
+        }
+
+        // Setup event listeners
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('postForm').addEventListener('submit', savePost);
+            document.getElementById('cancelEdit').addEventListener('click', resetForm);
+        });
+    </script>
+</body>
+</html>
