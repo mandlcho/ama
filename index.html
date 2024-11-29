@@ -408,28 +408,33 @@
         // Function to search posts
         async function searchPosts(query) {
             // Fetch posts
-            const posts = await fetchPosts();
+            const allPosts = await fetchPosts();
 
             // If no query, return all posts
             if (!query || query.trim() === '') {
-                displayPosts(posts, '');
+                displayPosts(allPosts, '');
                 return;
             }
 
-            // Perform case-insensitive search across title, tags, excerpt, and category
+            // Perform case-insensitive search across multiple fields
             const searchQuery = query.toLowerCase().trim();
-            const filteredPosts = posts.filter(post => 
-                post.title.toLowerCase().includes(searchQuery) ||
-                post.excerpt.toLowerCase().includes(searchQuery) ||
-                post.tags.some(tag => tag.toLowerCase().includes(searchQuery)) ||
-                post.category.toLowerCase().includes(searchQuery)
-            );
+            const filteredPosts = allPosts.filter(post => {
+                // Check if any field matches the search query
+                return (
+                    post.title.toLowerCase().includes(searchQuery) ||
+                    post.excerpt.toLowerCase().includes(searchQuery) ||
+                    post.category.toLowerCase().includes(searchQuery) ||
+                    // Check tags individually
+                    post.tags.some(tag => tag.toLowerCase().includes(searchQuery))
+                );
+            });
 
             displayPosts(filteredPosts, query);
         }
 
         // Function to display posts with staggered animations
         function displayPosts(posts, query) {
+            const resultsContainer = document.getElementById('resultsContainer');
             resultsContainer.innerHTML = ''; // Clear previous results
             resultsContainer.classList.remove('visible');
 
@@ -439,6 +444,9 @@
                 resultsContainer.classList.add('visible');
                 return;
             }
+
+            // Sort posts by date (most recent first)
+            posts.sort((a, b) => new Date(b.date) - new Date(a.date));
 
             posts.forEach((post, index) => {
                 const postCard = document.createElement('div');
