@@ -75,7 +75,7 @@
             max-width: 600px;
             opacity: 0;
             transform: translateY(20px);
-            transition: all 0.3s ease;
+            transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1);
             min-height: 0;
             overflow: hidden;
         }
@@ -93,18 +93,26 @@
             border-radius: 12px;
             border: 1px solid var(--border-color);
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+            opacity: 0;
+            transform: translateY(20px);
+            will-change: transform, opacity;
+        }
+
+        .post-card.visible {
             opacity: 1;
             transform: translateY(0);
         }
 
         .post-card.fade-out {
             opacity: 0;
-            transform: translateY(10px);
+            transform: translateY(-20px);
+            pointer-events: none;
         }
 
         .post-card:hover {
             transform: translateY(-2px);
+            transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
         .post-card h2 {
@@ -333,57 +341,78 @@
             displayPosts(filteredPosts, query);
         }
 
-        // Function to display posts
+        // Function to display posts with staggered animations
         function displayPosts(posts, query = '') {
             const container = document.getElementById('resultsContainer');
             
             if (posts.length === 0 && query) {
-                container.innerHTML = `
-                    <div class="no-results">
-                        No results found for "${query}"
-                    </div>
-                `;
-                container.classList.add('visible');
+                // Fade out existing cards first
+                fadeOutCards().then(() => {
+                    container.innerHTML = `
+                        <div class="no-results">
+                            No results found for "${query}"
+                        </div>
+                    `;
+                    container.classList.add('visible');
+                });
             } else if (posts.length > 0) {
-                const postsHtml = posts.map(post => `
-                    <div class="post-card" onclick="openArticle('${post.url}')">
-                        <h2>${post.title}</h2>
-                        <div class="post-meta">
-                            <span>${new Date(post.date).toLocaleDateString()}</span> | 
-                            <span>${post.category}</span>
+                // Fade out existing cards first
+                fadeOutCards().then(() => {
+                    const postsHtml = posts.map(post => `
+                        <div class="post-card" onclick="openArticle('${post.url}')">
+                            <h2>${post.title}</h2>
+                            <div class="post-meta">
+                                <span>${new Date(post.date).toLocaleDateString()}</span> | 
+                                <span>${post.category}</span>
+                            </div>
+                            <div class="tags">
+                                ${post.tags.map(tag => `<span class="tag">${tag}</span>`).join('')}
+                            </div>
+                            <p>${post.excerpt}</p>
                         </div>
-                        <div class="tags">
-                            ${post.tags.map(tag => `<span class="tag">${tag}</span>`).join('')}
-                        </div>
-                        <p>${post.excerpt}</p>
-                    </div>
-                `).join('');
-                
-                container.innerHTML = postsHtml;
-                container.classList.add('visible');
-                
-                // Trigger reflow to ensure animation works
-                container.offsetHeight;
-                
-                // Remove fade-out class from all cards
-                const cards = container.querySelectorAll('.post-card');
-                cards.forEach(card => card.classList.remove('fade-out'));
-            } else {
-                // Add fade-out class to all cards before removing
-                const cards = container.querySelectorAll('.post-card');
-                const fadePromises = Array.from(cards).map(card => {
-                    return new Promise(resolve => {
-                        card.classList.add('fade-out');
-                        card.addEventListener('transitionend', resolve, { once: true });
+                    `).join('');
+                    
+                    container.innerHTML = postsHtml;
+                    container.classList.add('visible');
+                    
+                    // Trigger reflow to ensure animation works
+                    container.offsetHeight;
+                    
+                    // Stagger the fade-in of cards
+                    const cards = container.querySelectorAll('.post-card');
+                    cards.forEach((card, index) => {
+                        setTimeout(() => {
+                            card.classList.add('visible');
+                        }, index * 100); // Stagger each card by 100ms
                     });
                 });
-
-                // Wait for all fade animations to complete
-                Promise.all(fadePromises).then(() => {
+            } else {
+                fadeOutCards().then(() => {
                     container.innerHTML = '';
                     container.classList.remove('visible');
                 });
             }
+        }
+
+        // Function to fade out all cards with a promise
+        function fadeOutCards() {
+            const container = document.getElementById('resultsContainer');
+            const cards = container.querySelectorAll('.post-card');
+            
+            if (cards.length === 0) {
+                return Promise.resolve();
+            }
+
+            const fadePromises = Array.from(cards).map((card, index) => {
+                return new Promise(resolve => {
+                    setTimeout(() => {
+                        card.classList.add('fade-out');
+                        card.addEventListener('transitionend', resolve, { once: true });
+                    }, index * 50); // Stagger the fade-out by 50ms
+                });
+            });
+
+            return Promise.all(fadePromises);
         }
 
         // Function to open article in modal
@@ -418,13 +447,14 @@
             }
         }
 
-        // Event listener for search input
+        // Debounce the search to prevent too frequent updates
+        let searchTimeout;
         searchInput.addEventListener('input', (e) => {
             clearTimeout(searchTimeout);
             searchTimeout = setTimeout(() => {
                 const query = e.target.value.trim();
                 searchPosts(query);
-            }, 300);
+            }, 200); // Slightly longer delay for smoother transitions
         });
 
         // Focus search input when page loads
